@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.DS_Store
+.gstack/
+# heavy intermediate conversion artifacts — final models live in site/public/models
+pipeline/*.glb

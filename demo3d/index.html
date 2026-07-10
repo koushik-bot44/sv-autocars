@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SV AUTO CARS — 3D feasibility demo</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --fg:#f2f4f4; --muted:#8d919c; --amber:#e0a33b;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif}
+  /* scroll runway: the page is tall; the canvas stays fixed */
+  #runway{height:640vh}
+  canvas#gl{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  #stage-label{
+    position:fixed;top:24px;left:28px;font-family:var(--mono);font-size:12px;
+    letter-spacing:.22em;color:var(--amber);text-transform:uppercase;
+  }
+  #stage-label small{display:block;color:var(--muted);margin-top:6px;letter-spacing:.16em}
+  #sub{
+    position:fixed;left:0;right:0;bottom:7vh;text-align:center;
+    font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:#cfd2d8;
+    text-shadow:0 1px 10px #000;
+  }
+  #hint{
+    position:fixed;left:0;right:0;bottom:2.5vh;text-align:center;
+    font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--muted);
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{50%{opacity:.35}}
+  #chips{
+    position:fixed;left:50%;bottom:12vh;transform:translateX(-50%);
+    display:flex;gap:14px;opacity:0;pointer-events:none;transition:opacity .5s;
+  }
+  #chips.on{opacity:1;pointer-events:auto}
+  #chips button{
+    width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.35);
+    cursor:pointer;transition:transform .2s;
+  }
+  #chips button:hover{transform:scale(1.15)}
+  #chips button.active{outline:2px solid var(--amber);outline-offset:4px}
+  #loader{
+    position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);
+    font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--muted);
+    z-index:10;transition:opacity .6s;
+  }
+  #loader.off{opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="runway"></div>
+<canvas id="gl"></canvas>
+<div id="loader">LOADING STUDIO_</div>
+<div id="stage-label">STAGE 02 / ENGINE_<small id="stage-sub">SCROLL SLOWLY</small></div>
+<p id="sub">— parts from nowhere —</p>
+<p id="hint">SCROLL ▼</p>
+<div id="chips">
+  <button data-c="#8e1420" class="active" style="background:#8e1420" aria-label="candy red"></button>
+  <button data-c="#1b2c52" style="background:#1b2c52" aria-label="midnight blue"></button>
+  <button data-c="#4a4d55" style="background:#4a4d55" aria-label="gunmetal"></button>
+  <button data-c="#e8e7e2" style="background:#e8e7e2" aria-label="pearl white"></button>
+  <button data-c="#e0a33b" style="background:#e0a33b" aria-label="amber"></button>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+}}
+</script>
+<script>
+  addEventListener('error', e => { const l=document.querySelector('#loader'); if(l) l.textContent='ERROR: '+(e.message||e.reason||'unknown'); });
+  addEventListener('unhandledrejection', e => { const l=document.querySelector('#loader'); if(l) l.textContent='ERROR: '+(e.reason?.message||e.reason||'promise rejected'); });
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const canvas = document.querySelector('#gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a0c);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.45;
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(4.2, 1.6, 6.2);
+camera.lookAt(0, 0.6, 0);
+
+/* studio lights: cool rim + faint amber accent (the site palette) */
+const rim = new THREE.SpotLight(0xdfe8f0, 60, 30, Math.PI/5, 0.5);
+rim.position.set(-6, 7, -4); scene.add(rim);
+const amber = new THREE.SpotLight(0xe0a33b, 25, 30, Math.PI/4, 0.7);
+amber.position.set(7, 3, 5); scene.add(amber);
+
+/* glossy black floor */
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(40, 64),
+  new THREE.MeshStandardMaterial({ color: 0x060608, metalness: 0.75, roughness: 0.32 })
+);
+floor.rotation.x = -Math.PI/2;
+scene.add(floor);
+
+const loaderEl = document.querySelector('#loader');
+const gltf = new GLTFLoader();
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+gltf.setDRACOLoader(draco);
+
+const load = url => new Promise((res, rej) => gltf.load(url, res, undefined, rej));
+
+/* fit an object to a target size and rest it on the floor */
+function fitToStage(obj, size, lift = 0) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const dim = box.getSize(new THREE.Vector3());
+  obj.scale.setScalar(size / Math.max(dim.x, dim.y, dim.z));
+  box.setFromObject(obj);
+  const c = box.getCenter(new THREE.Vector3());
+  obj.position.x -= c.x; obj.position.z -= c.z;
+  obj.position.y += (lift - box.min.y);
+}
+
+const [engineGltf, carGltf] = await Promise.all([
+  load('models/engine.glb'),
+  load('models/ferrari.glb'),
+]);
+
+/* ---------- ENGINE: flatten parts, precompute exploded positions ---------- */
+const engineGroup = new THREE.Group();
+scene.add(engineGroup);
+engineGltf.scene.updateMatrixWorld(true);
+fitToStage(engineGltf.scene, 3.4, 0.9);
+engineGltf.scene.updateMatrixWorld(true);
+const stage = new THREE.Group();
+engineGroup.add(stage);
+const meshes = [];
+engineGltf.scene.traverse(o => { if (o.isMesh) meshes.push(o); });
+scene.add(engineGltf.scene);                       // temp so attach() keeps world transforms
+meshes.forEach(m => stage.attach(m));
+scene.remove(engineGltf.scene);
+
+const center = new THREE.Box3().setFromObject(stage).getCenter(new THREE.Vector3());
+const rand = (a,b)=>a+Math.random()*(b-a);
+const parts = meshes.map(m => {
+  const orig = m.position.clone();
+  const dir = m.getWorldPosition(new THREE.Vector3()).sub(center);
+  if (dir.lengthSq() < 1e-6) dir.set(rand(-1,1), rand(-1,1), rand(-1,1));
+  dir.normalize();
+  const exploded = orig.clone().addScaledVector(dir, rand(2.2, 5.5));
+  exploded.y = Math.max(exploded.y, 0.4);
+  const rot = new THREE.Euler(rand(-.9,.9), rand(-.9,.9), rand(-.9,.9));
+  return { m, orig, exploded, origRot: m.rotation.clone(), rot };
+});
+
+/* ---------- CAR: physical paint, hidden until its phase ---------- */
+const carGroup = new THREE.Group();
+carGroup.visible = false;
+scene.add(carGroup);
+const car = carGltf.scene;
+const bodyMat = new THREE.MeshPhysicalMaterial({
+  color: 0x8e1420, metalness: 1.0, roughness: 0.5, clearcoat: 1.0, clearcoatRoughness: 0.03
+});
+const detailMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1.0, roughness: 0.5 });
+const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0.25, roughness: 0, transmission: 1.0 });
+const byName = n => car.getObjectByName(n);
+byName('body') && (byName('body').material = bodyMat);
+['rim_fl','rim_fr','rim_rr','rim_rl','trim'].forEach(n => byName(n) && (byName(n).material = detailMat));
+byName('glass') && (byName('glass').material = glassMat);
+fitToStage(car, 4.6, 0);
+carGroup.add(car);
+
+loaderEl.classList.add('off');
+
+/* test hook: #p=2.6 jumps the scroll to that phase (used for automated screenshots) */
+const hp = new URLSearchParams(location.hash.slice(1)).get('p');
+if (hp) { scrollTo(0, parseFloat(hp) * innerHeight); scrollP = parseFloat(hp); smooth = scrollP; }
+
+/* ---------- chips ---------- */
+const targetColor = new THREE.Color(0x8e1420);
+document.querySelectorAll('#chips button').forEach(b => b.onclick = () => {
+  document.querySelector('#chips .active')?.classList.remove('active');
+  b.classList.add('active');
+  targetColor.set(b.dataset.c);
+});
+
+/* ---------- scroll choreography ----------
+   phases (in screens of scroll):
+   0.0–2.6  assemble engine (scrub)
+   2.6–3.6  engine "runs" (turntable) — placeholder for piston loop
+   3.6–6.4  car + paint chips                                     */
+let scrollP = 0, smooth = 0;
+addEventListener('scroll', () => { scrollP = scrollY / innerHeight; }, { passive: true });
+const subEl = document.querySelector('#sub');
+const labelEl = document.querySelector('#stage-label');
+const stageSub = document.querySelector('#stage-sub');
+const chipsEl = document.querySelector('#chips');
+const ease = t => t*t*(3-2*t);
+const mouse = { x: 0, y: 0 };
+addEventListener('pointermove', e => {
+  mouse.x = (e.clientX/innerWidth - .5); mouse.y = (e.clientY/innerHeight - .5);
+});
+
+let last = performance.now();
+renderer.setAnimationLoop(now => {
+  const dt = (now - last)/1000; last = now;
+  smooth += (scrollP - smooth) * Math.min(1, dt*6);   // buttery lag
+
+  const p = smooth;
+  const assembleT = ease(Math.min(1, Math.max(0, p/2.6)));
+  const carPhase = p > 3.6;
+
+  if (!carPhase) {
+    engineGroup.visible = true; carGroup.visible = false;
+    for (const it of parts) {
+      it.m.position.lerpVectors(it.exploded, it.orig, assembleT);
+      it.m.rotation.set(
+        it.rot.x + (it.origRot.x - it.rot.x)*assembleT,
+        it.rot.y + (it.origRot.y - it.rot.y)*assembleT,
+        it.rot.z + (it.origRot.z - it.rot.z)*assembleT
+      );
+    }
+    if (p > 2.6) engineGroup.rotation.y += dt*0.35;    // "running" turntable
+    subEl.textContent = p < 1.2 ? '— parts from nowhere —'
+                    : p < 2.6 ? '— the engine assembles —'
+                    : '— it runs · every service starts here —';
+    labelEl.firstChild.textContent = 'STAGE 02 / ENGINE_';
+    stageSub.textContent = p < 2.6 ? 'SCROLL = ASSEMBLE' : 'MECHANICAL · DIAGNOSTICS · OVERHAUL';
+    chipsEl.classList.remove('on');
+  } else {
+    engineGroup.visible = false; carGroup.visible = true;
+    carGroup.rotation.y += dt*0.25;
+    bodyMat.color.lerp(targetColor, Math.min(1, dt*5));
+    subEl.textContent = '— tap a chip. repaint the car. —';
+    labelEl.firstChild.textContent = 'STAGE 05 / PAINT_';
+    stageSub.textContent = 'FULL REPAINT · CUSTOM COLORS · CORRECTION';
+    chipsEl.classList.add('on');
+  }
+
+  camera.position.x += (4.2 + mouse.x*0.8 - camera.position.x)*dt*3;
+  camera.position.y += (1.6 - mouse.y*0.5 - camera.position.y)*dt*3;
+  camera.lookAt(0, 0.7, 0);
+  renderer.render(scene, camera);
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
