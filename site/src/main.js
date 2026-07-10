@@ -47,7 +47,9 @@ function withProgress(promiseFactory, key) {
   });
 }
 
-const carURL = IS_MOBILE ? '/models/porsche-mobile.glb' : '/models/porsche.glb';
+// BASE_URL is '/' in dev, '/sv-autocars/' on GitHub Pages
+const BASE = import.meta.env.BASE_URL;
+const carURL = BASE + (IS_MOBILE ? 'models/porsche-mobile.glb' : 'models/porsche.glb');
 
 Promise.all([
   withProgress(
@@ -55,7 +57,7 @@ Promise.all([
     'car'
   ),
   withProgress(
-    (cb) => new Promise((res, rej) => loader.load('/models/engine.glb', res, cb, rej)),
+    (cb) => new Promise((res, rej) => loader.load(BASE + 'models/engine.glb', res, cb, rej)),
     'engine'
   ),
 ])
