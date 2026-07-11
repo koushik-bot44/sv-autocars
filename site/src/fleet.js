@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { FLEET } from './data.js';
 
 const BASE = import.meta.env.BASE_URL;
-export const CAR_SPACING = 14; // meters between parked cars
+export const CAR_SPACING = 40; // far apart — every shot isolates ONE car
 
 const isPaintMat = (name = '') =>
   /paint|coloured/i.test(name) && !/trim|carbon|calliper|caliper|gloss/i.test(name);

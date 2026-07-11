@@ -69,9 +69,9 @@ export const CHAPTERS = [
   {
     id: 'paint',
     label: 'CH.02 / THE SKIN_',
-    headline: 'Pick a color. Watch it happen.',
+    headline: 'Booth-finished. Showroom deep.',
     body:
-      'Full-body repaints, custom colors, paint correction — booth-finished to a showroom standard. Tap a chip. That is the actual car.',
+      'Full-body repaints, custom colors, paint correction — leveled, polished and cured until the reflection tells the truth.',
     services: [
       'FULL-BODY REPAINT',
       'CUSTOM COLORS',

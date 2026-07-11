@@ -22,10 +22,10 @@ export function createStage(canvas) {
 
   // WHITE SHOWROOM: premium light studio — the CSS layer behind the
   // transparent canvas provides the white + red-lines backdrop.
-  // fog fades distant cars into the white — the avenue disappears elegantly
+  // tight fog: neighboring cars vanish into the white — one car per shot
   const FOG = 0xf5f5f3;
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(FOG, 34, 150);
+  scene.fog = new THREE.Fog(FOG, 22, 58);
 
   const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.08, 200);
   camera.position.set(6.5, 1.6, 7.5);
@@ -60,7 +60,7 @@ export function createStage(canvas) {
   // ---- Glossy black floor disc + soft light pool under the car.
   // one long showroom floor under the whole avenue of cars
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(320, 140),
+    new THREE.PlaneGeometry(760, 160),
     new THREE.MeshStandardMaterial({
       color: 0xeaeae7,
       roughness: 0.55,
@@ -69,7 +69,7 @@ export function createStage(canvas) {
     })
   );
   floor.rotation.x = -Math.PI / 2;
-  floor.position.set(42, 0, 0);
+  floor.position.set(120, 0, 0);
   scene.add(floor);
 
   addEventListener('resize', () => {

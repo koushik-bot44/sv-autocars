@@ -49,13 +49,16 @@ body {
   z-index: -2; pointer-events: none;
 }
 #bg-lines path {
-  fill: none; stroke: #e10600; stroke-width: 1.4;
+  fill: none; stroke: #e10600; stroke-width: 1.6;
   stroke-dasharray: 1600 240; stroke-dashoffset: 0;
   animation: lineflow 30s linear infinite;
 }
-#bg-lines path:nth-child(1) { opacity: 0.55; }
-#bg-lines path:nth-child(2) { opacity: 0.3; animation-duration: 44s; animation-direction: reverse; }
-#bg-lines path:nth-child(3) { opacity: 0.16; stroke-width: 2.4; animation-duration: 60s; }
+#bg-lines path:nth-of-type(1) { opacity: 0.7; stroke-width: 2.1; }
+#bg-lines path:nth-of-type(2) { opacity: 0.36; animation-duration: 44s; animation-direction: reverse; }
+#bg-lines path:nth-of-type(3) { opacity: 0.2; stroke-width: 2.6; animation-duration: 60s; }
+#bg-lines path:nth-of-type(4) { opacity: 0.26; animation-duration: 52s; }
+#bg-lines path:nth-of-type(5) { opacity: 0.14; stroke-width: 3; animation-duration: 74s; animation-direction: reverse; }
+#bg-lines .ring.r3 { opacity: 0.07; stroke-width: 1; animation-duration: 120s; }
 @keyframes lineflow {
   from { stroke-dashoffset: 0; }
   to   { stroke-dashoffset: -1840; }

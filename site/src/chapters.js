@@ -18,16 +18,17 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Poses are car-local (nose +Z); `car` maps them to that car's parking spot
 // on the avenue. `car: null` = absolute world coordinates.
 const BAY = { x: -90, y: 1.15, z: 0 };
+// Reel-style framing: tight, low, detail-first — like 4K car reels.
 const RAW_POSES = {
   hero:   { car: 0, pos: [2.6, 8.4, 3.6],   look: [0, 0, 0.35],      fov: 34 }, // SF90, top-down
-  heroB:  { car: 0, pos: [4.2, 5.6, 5.2],   look: [0, 0.35, 0.2],    fov: 37 },
+  heroB:  { car: 0, pos: [3.6, 4.6, 4.4],   look: [0, 0.4, 0.2],     fov: 36 },
   heart:  { car: null, pos: [BAY.x + 1.1, BAY.y + 0.5, 2.5], look: [BAY.x, BAY.y, BAY.z], fov: 44 },
-  paint:  { car: 1, pos: [7.9, 1.0, 0.6],   look: [-0.4, 0.52, 0.3], fov: 38 }, // 488 Pista, profile
-  shield: { car: 2, pos: [3.0, 0.8, 3.4],   look: [0.55, 0.55, 1.1], fov: 34 }, // One:1, fender close
-  inside: { car: 5, pos: [1.8, 3.4, 1.5],   look: [0, 0.65, -0.15],  fov: 46 }, // Artura, open cockpit
-  stance: { car: 3, pos: [-3.4, 1.0, -4.8], look: [0, 0.75, -0.5],   fov: 40 }, // Vulcan, rear wing
-  ledger: { car: null, pos: [42, 5.5, 30],  look: [42, 0.6, 0],      fov: 42 }, // the whole fleet
-  book:   { car: 4, pos: [-4.8, 1.25, -5.6], look: [0, 0.6, -0.2],   fov: 42 }, // 600LT, rear 3/4
+  paint:  { car: 1, pos: [3.1, 0.72, 2.3],  look: [0.5, 0.55, 0.95], fov: 30 }, // Pista, low fender rake
+  shield: { car: 2, pos: [1.9, 0.78, 2.7],  look: [0.42, 0.6, 1.35], fov: 27 }, // One:1, headlight macro
+  inside: { car: 5, pos: [1.25, 2.5, 1.05], look: [0, 0.72, -0.1],   fov: 41 }, // Artura, cockpit dive
+  stance: { car: 3, pos: [-2.6, 0.9, -3.3], look: [-0.35, 0.82, -0.95], fov: 31 }, // Vulcan, wing close
+  ledger: { car: 6, pos: [4.6, 4.4, 5.2],   look: [0, 0.75, 0],      fov: 38 }, // G63, high hero
+  book:   { car: 4, pos: [2.9, 0.62, 3.7],  look: [0, 0.55, 0.35],   fov: 33 }, // 600LT, low front 3/4
 };
 // movie-credits layout: these chapters put text on the RIGHT, so their
 // shots are mirrored (car composes to the left of frame)
@@ -49,7 +50,6 @@ export function buildChoreography({ camera, lights, showroom, engine, lenis }) {
   injectScripts();
   injectCraft();
   injectLedger();
-  injectPaintChips(showroom);
   injectRail();
   wireContacts();
 
@@ -77,6 +77,10 @@ export function buildChoreography({ camera, lights, showroom, engine, lenis }) {
   applyCam(0);
 
   // ---------- one continuous take: chain pose→pose per section ----------
+  // Between two cars the camera pulls wide and TRACKS along the avenue —
+  // the current car rolls out of frame while the next rolls in (the oryzo
+  // page-to-page travel). Off-avenue poses (engine bay) skip the tracking.
+  const onAvenue = (p) => p.look[0] > -5;
   const chain = [
     ['#hero', POSES.hero, POSES.heroB],
     ['#heart', POSES.heroB, POSES.heart],
@@ -87,28 +91,35 @@ export function buildChoreography({ camera, lights, showroom, engine, lenis }) {
     ['#ledger', POSES.stance, POSES.ledger],
     ['#book', POSES.ledger, POSES.book],
   ];
+  const poseVars = (p, extra = {}) => ({
+    px: p.pos[0], py: p.pos[1], pz: p.pos[2],
+    lx: p.look[0], ly: p.look[1], lz: p.look[2], fov: p.fov,
+    ...extra,
+  });
   for (const [sel, from, to] of chain) {
-    gsap.fromTo(
-      cam,
-      {
-        px: from.pos[0], py: from.pos[1], pz: from.pos[2],
-        lx: from.look[0], ly: from.look[1], lz: from.look[2], fov: from.fov,
-      },
-      {
-        px: to.pos[0], py: to.pos[1], pz: to.pos[2],
-        lx: to.look[0], ly: to.look[1], lz: to.look[2], fov: to.fov,
-        // shot change completes in the first ~60vh of the chapter,
-        // then the camera holds while the script reads
+    const travel =
+      onAvenue(from) && onAvenue(to) && Math.abs(to.look[0] - from.look[0]) > CAR_SPACING * 0.6;
+    const st = {
+      trigger: sel,
+      start: 'top top',
+      end: '+=60%',
+      scrub: REDUCED ? true : 0.9,
+    };
+    if (travel) {
+      const midX = (from.look[0] + to.look[0]) / 2;
+      const mid = { pos: [midX, 1.7, 10.5], look: [midX, 0.6, 0], fov: 42 };
+      gsap.timeline({ scrollTrigger: st })
+        .set(cam, poseVars(from))
+        .to(cam, poseVars(mid, { duration: 0.55, ease: 'power1.inOut' }))
+        .to(cam, poseVars(to, { duration: 0.45, ease: 'power2.out' }));
+    } else {
+      gsap.fromTo(cam, poseVars(from), {
+        ...poseVars(to),
         ease: 'power2.inOut',
         immediateRender: false,
-        scrollTrigger: {
-          trigger: sel,
-          start: 'top top',
-          end: '+=60%',
-          scrub: REDUCED ? true : 0.9,
-        },
-      }
-    );
+        scrollTrigger: st,
+      });
+    }
   }
 
   // ---------- CH.01: engine assembly + power reveal ----------
@@ -140,17 +151,11 @@ export function buildChoreography({ camera, lights, showroom, engine, lenis }) {
     onLeaveBack: () => ignite(false, lights),
   });
 
-  // ---------- paint chips visibility + car slow turn during paint ----------
-  const chips = document.querySelector('.paint-chips');
-  gsap.set(chips, { autoAlpha: 0, y: 20 });
-  ScrollTrigger.create({
-    trigger: '#paint',
-    start: 'top 25%',
-    end: 'bottom 60%',
-    onEnter: () => gsap.to(chips, { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out' }),
-    onLeave: () => gsap.to(chips, { autoAlpha: 0, y: 20, duration: 0.4 }),
-    onEnterBack: () => gsap.to(chips, { autoAlpha: 1, y: 0, duration: 0.6 }),
-    onLeaveBack: () => gsap.to(chips, { autoAlpha: 0, y: 20, duration: 0.4 }),
+  // ---------- background lines breathe with the scroll ----------
+  gsap.to('#bg-lines', {
+    yPercent: -7,
+    ease: 'none',
+    scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 1.4 },
   });
 
   // ---------- script block enter/exit (Figma smart-animate feel) ----------
@@ -215,7 +220,7 @@ export function buildChoreography({ camera, lights, showroom, engine, lenis }) {
   const OVERLAYS = [
     ['#hero',   { note: '* ACTUAL 3D MODEL — SPIN IT WITH YOUR SCROLL' }],
     ['#heart',  { note: '* REAL PARTS. REAL TORQUE SPECS.' }],
-    ['#paint',  { giant: 'repaint.', note: '* TAP A CHIP — THAT IS THE ACTUAL CAR' }],
+    ['#paint',  { giant: 'repaint.', note: '* LEVELED. POLISHED. CURED. REPEATED.' }],
     ['#shield', { frame: true, note: '* SELF-HEALING FILM. YES, REALLY.' }],
     ['#inside', { note: '* SMELLS LIKE NEW. THAT IS THE POINT.' }],
     ['#stance', { giant: 'planted.', note: '* TORQUED TO SPEC, NOT TO FEEL' }],
