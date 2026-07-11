@@ -7,34 +7,49 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { CHAPTERS, PAINTS, LEDGER, BRAND } from './data.js';
+import { CHAPTERS, PAINTS, LEDGER, BRAND, CRAFT } from './data.js';
+import { CAR_SPACING } from './fleet.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// ---------- camera poses (car nose points +Z, stands at origin) ----------
-// CH.01 happens in a dark bay far from the car — the photoreal engine
-// cinema (DOM layer) plays over pure darkness there.
+// ---------- the route: each chapter parks the camera at a different car ----------
+// Poses are car-local (nose +Z); `car` maps them to that car's parking spot
+// on the avenue. `car: null` = absolute world coordinates.
 const BAY = { x: -90, y: 1.15, z: 0 };
-const POSES = {
-  // hero: high top-down three-quarter — the "product on the workbench" shot
-  hero:   { pos: [2.6, 8.4, 3.6],   look: [0, 0, 0.35],      fov: 34 },
-  heroB:  { pos: [4.2, 5.6, 5.2],   look: [0, 0.35, 0.2],    fov: 37 },
-  heart:  { pos: [BAY.x + 1.1, BAY.y + 0.5, 2.5], look: [BAY.x, BAY.y, BAY.z], fov: 44 },
-  paint:  { pos: [7.9, 1.0, 0.6],   look: [-0.4, 0.52, 0.3], fov: 38 },
-  shield: { pos: [3.0, 0.8, 3.4],   look: [0.55, 0.55, 1.1], fov: 34 },
-  inside: { pos: [0.42, 1.14, 2.35], look: [-0.1, 0.72, -1.4], fov: 56 },
-  stance: { pos: [3.1, 0.55, 2.4],  look: [1.5, 0.4, 0.85],  fov: 36 },
-  ledger: { pos: [-7.4, 3.2, 8.0],  look: [0, 0.5, 0],       fov: 38 },
-  book:   { pos: [-5.6, 1.25, -6.9], look: [0, 0.62, 0],     fov: 42 },
+const RAW_POSES = {
+  hero:   { car: 0, pos: [2.6, 8.4, 3.6],   look: [0, 0, 0.35],      fov: 34 }, // SF90, top-down
+  heroB:  { car: 0, pos: [4.2, 5.6, 5.2],   look: [0, 0.35, 0.2],    fov: 37 },
+  heart:  { car: null, pos: [BAY.x + 1.1, BAY.y + 0.5, 2.5], look: [BAY.x, BAY.y, BAY.z], fov: 44 },
+  paint:  { car: 1, pos: [7.9, 1.0, 0.6],   look: [-0.4, 0.52, 0.3], fov: 38 }, // 488 Pista, profile
+  shield: { car: 2, pos: [3.0, 0.8, 3.4],   look: [0.55, 0.55, 1.1], fov: 34 }, // One:1, fender close
+  inside: { car: 5, pos: [1.8, 3.4, 1.5],   look: [0, 0.65, -0.15],  fov: 46 }, // Artura, open cockpit
+  stance: { car: 3, pos: [-3.4, 1.0, -4.8], look: [0, 0.75, -0.5],   fov: 40 }, // Vulcan, rear wing
+  ledger: { car: null, pos: [42, 5.5, 30],  look: [42, 0.6, 0],      fov: 42 }, // the whole fleet
+  book:   { car: 4, pos: [-4.8, 1.25, -5.6], look: [0, 0.6, -0.2],   fov: 42 }, // 600LT, rear 3/4
 };
+// movie-credits layout: these chapters put text on the RIGHT, so their
+// shots are mirrored (car composes to the left of frame)
+const RIGHT_SIDE = new Set(['paint', 'inside']);
+const POSES = Object.fromEntries(
+  Object.entries(RAW_POSES).map(([k, p]) => {
+    const flip = RIGHT_SIDE.has(k) ? -1 : 1;
+    const dx = p.car != null ? p.car * CAR_SPACING : 0;
+    return [k, {
+      pos: [p.pos[0] * flip + dx, p.pos[1], p.pos[2]],
+      look: [p.look[0] * flip + dx, p.look[1], p.look[2]],
+      fov: p.fov,
+    }];
+  })
+);
 
-export function buildChoreography({ camera, lights, car, engine, lenis }) {
+export function buildChoreography({ camera, lights, showroom, engine, lenis }) {
   // ---------- inject chapter DOM ----------
   injectScripts();
+  injectCraft();
   injectLedger();
-  injectPaintChips(car);
+  injectPaintChips(showroom);
   injectRail();
   wireContacts();
 
@@ -45,6 +60,7 @@ export function buildChoreography({ camera, lights, car, engine, lenis }) {
     lx: p0.look[0], ly: p0.look[1], lz: p0.look[2],
     fov: p0.fov,
   };
+  const project = new THREE.Vector3();
   const applyCam = (t = 0) => {
     const drift = REDUCED ? 0 : 1;
     camera.position.set(
@@ -137,15 +153,6 @@ export function buildChoreography({ camera, lights, car, engine, lenis }) {
     onLeaveBack: () => gsap.to(chips, { autoAlpha: 0, y: 20, duration: 0.4 }),
   });
 
-  // ---------- stance: wheels spin while chapter is active ----------
-  const spin = { active: false };
-  ScrollTrigger.create({
-    trigger: '#stance',
-    start: 'top 60%',
-    end: 'bottom 20%',
-    onToggle: (self) => (spin.active = self.isActive),
-  });
-
   // ---------- script block enter/exit (Figma smart-animate feel) ----------
   document.querySelectorAll('.script').forEach((block) => {
     const label = block.querySelector('.label');
@@ -159,12 +166,14 @@ export function buildChoreography({ camera, lights, car, engine, lenis }) {
     gsap.set(targets, { y: 26, opacity: 0 });
     gsap.set(items, { x: -18, opacity: 0 });
 
+    const chapterEl = block.closest('.chapter');
+    const side = chapterEl.classList.contains('side-right') ? 'right' : 'left';
     ScrollTrigger.create({
-      trigger: block.closest('.chapter'),
+      trigger: chapterEl,
       start: 'top 8%',
       end: 'bottom 60%',
-      onEnter: () => enterTl(),
-      onEnterBack: () => enterTl(),
+      onEnter: () => { document.body.dataset.side = side; enterTl(); },
+      onEnterBack: () => { document.body.dataset.side = side; enterTl(); },
       onLeave: () => exitTl(),
       onLeaveBack: () => exitTl(),
     });
@@ -184,12 +193,19 @@ export function buildChoreography({ camera, lights, car, engine, lenis }) {
     }
   });
 
-  // ---------- ledger rows reveal ----------
+  // ---------- ledger rows + craft cards reveal ----------
   gsap.set('.ledger-row', { opacity: 0, y: 24 });
   ScrollTrigger.batch('.ledger-row', {
     start: 'top 85%',
     onEnter: (rows) =>
       gsap.to(rows, { opacity: 1, y: 0, duration: 0.55, stagger: 0.06, ease: 'power3.out', overwrite: true }),
+  });
+  // oryzo-style sliding boxes — cards glide in from the side
+  gsap.set('.craft-card', { opacity: 0, x: 140 });
+  ScrollTrigger.batch('.craft-card', {
+    start: 'top 88%',
+    onEnter: (cards) =>
+      gsap.to(cards, { opacity: 1, x: 0, duration: 0.8, stagger: 0.1, ease: 'power3.out', overwrite: true }),
   });
 
   // ---------- per-chapter fixed overlays: giant back-word, footnote, frame ----------
@@ -213,7 +229,7 @@ export function buildChoreography({ camera, lights, car, engine, lenis }) {
       onToggle: (self) => {
         if (self.isActive) {
           if (cfg.giant) giant.textContent = cfg.giant;
-          gsap.to(giant, { opacity: cfg.giant ? 0.24 : 0, duration: 0.7 });
+          gsap.to(giant, { opacity: cfg.giant ? 0.08 : 0, duration: 0.7 });
           if (cfg.note) note.textContent = cfg.note;
           gsap.to(note, { opacity: cfg.note ? 1 : 0, duration: 0.6 });
           gsap.to(frame, { opacity: cfg.frame ? 1 : 0, duration: 0.6 });
@@ -255,7 +271,7 @@ export function buildChoreography({ camera, lights, car, engine, lenis }) {
     });
   });
 
-  return { cam, applyCam, spin };
+  return { cam, applyCam };
 }
 
 // ============================================================
@@ -285,9 +301,11 @@ function scramble(el, finalText, dur = 0.7) {
 }
 
 function injectScripts() {
+  const RIGHT = new Set(['paint', 'inside']);
   for (const [i, ch] of CHAPTERS.entries()) {
     const section = document.getElementById(ch.id);
     if (!section) continue;
+    if (RIGHT.has(ch.id)) section.classList.add('side-right');
     const wordList = ch.headline.split(' ');
     const words = wordList
       .map((w, wi) => {
@@ -310,6 +328,22 @@ function injectScripts() {
   }
 }
 
+function injectCraft() {
+  const grid = document.querySelector('.craft-grid');
+  grid.innerHTML = CRAFT.map(
+    (c) => `<article class="craft-card">
+      <div class="craft-media">
+        ${c.img ? `<img src="${c.img}" alt="${c.title}" loading="lazy" />` : `<span class="drop-hint">PHOTO SLOT — ${c.tag}</span>`}
+      </div>
+      <div class="craft-body">
+        <h3>${c.title}</h3>
+        <p>${c.desc}</p>
+        <span class="tag">${c.tag}</span>
+      </div>
+    </article>`
+  ).join('');
+}
+
 function injectLedger() {
   const wrap = document.querySelector('.ledger-rows');
   wrap.innerHTML = LEDGER.map(
@@ -321,11 +355,12 @@ function injectLedger() {
   ).join('');
 }
 
-function injectPaintChips(car) {
+function injectPaintChips(showroom) {
+  const PAINT_CAR = 1; // CH.02 paints the 488 Pista
   const wrap = document.querySelector('.paint-chips');
   wrap.innerHTML = PAINTS.map(
-    (p, i) =>
-      `<button class="paint-chip${i === 0 ? ' active' : ''}" style="background:${p.ui}" aria-label="Paint: ${p.name}">
+    (p) =>
+      `<button class="paint-chip" style="background:${p.ui}" aria-label="Paint: ${p.name}">
          <span class="tip">${p.name}</span>
        </button>`
   ).join('');
@@ -335,10 +370,14 @@ function injectPaintChips(car) {
       chips.forEach((c) => c.classList.remove('active'));
       chip.classList.add('active');
       const target = new THREE.Color(PAINTS[i].hex);
-      gsap.to(car.mats._paint.color, {
-        r: target.r, g: target.g, b: target.b,
-        duration: 0.9, ease: 'power2.inOut',
-      });
+      const car = showroom.cars[PAINT_CAR];
+      if (!car) return;
+      for (const m of car.paintMats) {
+        gsap.to(m.color, {
+          r: target.r, g: target.g, b: target.b,
+          duration: 0.9, ease: 'power2.inOut',
+        });
+      }
     });
   });
 }

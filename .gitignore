@@ -4,3 +4,6 @@ dist/
 .gstack/
 # heavy intermediate conversion artifacts — final models live in site/public/models
 pipeline/*.glb
+pipeline/v6/
+pipeline/*.obj
+pipeline/**/*.glb

@@ -16,8 +16,30 @@ export const BRAND = {
     encodeURIComponent('Hi SV Autocars — I found you through your website. I want to book my car in.'),
 };
 
+// The fleet — every car in the switcher. `face` corrects models whose
+// nose doesn't point +Z after load; `length` is the real-world size to
+// normalize to (meters).
+export const FLEET = [
+  { id: 'sf90',       name: 'Ferrari SF90 Spider',    file: 'models/fleet/sf90.glb',       length: 4.7, face: Math.PI / 2 },
+  { id: 'pista',      name: 'Ferrari 488 Pista',      file: 'models/fleet/pista.glb',      length: 4.6, face: Math.PI / 2 },
+  { id: 'one1',       name: 'Koenigsegg One:1',       file: 'models/fleet/one1.glb',       length: 4.5, face: Math.PI / 2 },
+  { id: 'vulcan',     name: 'Aston Martin Vulcan',    file: 'models/fleet/vulcan.glb',     length: 4.8, face: Math.PI / 2 },
+  { id: 'mclaren600', name: 'McLaren 600LT',          file: 'models/fleet/mclaren600.glb', length: 4.6, face: Math.PI / 2 },
+  { id: 'artura',     name: 'McLaren Artura Spider',  file: 'models/fleet/artura.glb',     length: 4.6, face: Math.PI / 2 },
+  { id: 'g63',        name: 'Mercedes-AMG G 63',      file: 'models/fleet/g63.glb',        length: 4.9, face: Math.PI / 2 },
+];
+
+// Numbered cinematic profiles — Sketchfab-annotation style camera presets.
+// Positions are relative to a normalized car (nose +Z, ~4.7m long, y=0 floor).
+export const PROFILES = [
+  { n: 1, name: 'Signature',  pos: [4.6, 1.4, 5.6],  look: [0, 0.5, 0.2],   fov: 38 },
+  { n: 2, name: 'Low Front',  pos: [0.4, 0.55, 6.9], look: [0, 0.65, 0],    fov: 34 },
+  { n: 3, name: 'Profile',    pos: [7.6, 0.95, 0.2], look: [0, 0.55, 0.1],  fov: 36 },
+  { n: 4, name: 'Rear Wing',  pos: [-3.4, 1.15, -5.2], look: [0, 0.6, -0.6], fov: 40 },
+  { n: 5, name: 'Top Deck',   pos: [2.2, 7.4, 2.8],  look: [0, 0, 0.3],     fov: 33 },
+];
+
 // Paint chips for the live repaint chapter (clearcoat colors).
-// First chip is the default body color — oryzo cream.
 export const PAINTS = [
   { name: 'Ivory',         hex: 0xe9e3d1, ui: '#e9e3d1' },
   { name: 'Guards Red',    hex: 0x9e1220, ui: '#9e1220' },
@@ -103,6 +125,23 @@ export const CHAPTERS = [
     ],
     proof: 'PROOF · PORSCHE CAYENNE BRAKES · GLS 350 AIRMATIC',
   },
+];
+
+// THE CRAFT — service cards. Drop real workshop photos into
+// site/public/cards/ (e.g. ppf.jpg) and set `img: 'cards/ppf.jpg'`.
+export const CRAFT = [
+  { title: 'Paint Protection Film', tag: 'PPF · SELF-HEALING', img: null,
+    desc: 'Full-body or high-impact zones. Invisible armor that heals its own swirl marks with heat.' },
+  { title: 'Paint & Body', tag: 'BOOTH-FINISHED', img: null,
+    desc: 'Full repaints, custom colors, dent and panel work — finished to showroom depth, not just shine.' },
+  { title: 'Performance & Mechanical', tag: 'DIAGNOSED, NOT GUESSED', img: null,
+    desc: 'Engine overhauls, transmissions, brakes, Airmatic suspension — German and exotic specialists.' },
+  { title: 'Ceramic & Teflon Coating', tag: 'GLOSS THAT LASTS', img: null,
+    desc: 'Multi-layer ceramic or Teflon protection that keeps the deep-wet look through Hyderabad summers.' },
+  { title: 'Interiors', tag: 'DRIVER-FIRST', img: null,
+    desc: 'Deep cleaning, upholstery, leather restoration and dashboard refresh — new-car feel inside.' },
+  { title: 'Wheels & Detailing', tag: 'THE FINAL 10%', img: null,
+    desc: 'Alloy refinishing, alignment, headlight restoration and full-body detailing before delivery.' },
 ];
 
 // THE LEDGER — real jobs from @sv_autocars. Every entry is real work;

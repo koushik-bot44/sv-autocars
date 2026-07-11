@@ -2,28 +2,30 @@
    SV AUTOCARS — design tokens (bklit teardown, PLAN.md §1)
    ============================================================ */
 :root {
-  /* ORYZO look — warm coffee-brown studio, giant cream type, hot orange */
-  --bg: #1a120b;
-  --bg-deep: #0f0a06;
-  --bg-warm: #2c1e10;
-  --fg: #f2ead9;
-  --muted: #b3a58d;
-  --hairline: rgba(242, 234, 217, 0.22);
-  --accent: #8f8271;           /* pre-ignition: muted taupe          */
-  --accent-live: #ff5a1e;      /* born at CH.01 ignition             */
-  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  /* WHITE SHOWROOM — premium white, engineered red lines, dark type */
+  --bg: #f6f6f4;
+  --bg-deep: #ececea;
+  --fg: #101114;
+  --muted: #74746e;
+  --hairline: rgba(16, 17, 20, 0.14);
+  --accent: #9a9a94;           /* pre-ignition: neutral grey         */
+  --accent-live: #e10600;      /* born at CH.01 ignition — racing red */
+  --font-display: 'Archivo', system-ui, sans-serif;
   --font-serif: 'Literata', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 }
-/* the black studio theme, one attribute away: <body data-theme="noir"> */
-body[data-theme='noir'] {
-  --bg: #0a0a0c; --bg-deep: #060608;
-  --fg: #f9fbfb; --muted: #9aa0ab;
-  --hairline: rgba(111, 116, 128, 0.2);
-  --accent: #6f7480; --accent-live: #e0a33b;
-}
 body[data-ignited="1"] { --accent: var(--accent-live); }
+
+/* readability scrims swap sides with the movie-credit chapters */
+.text-scrim, .text-scrim-r { transition: opacity 0.6s ease; }
+.text-scrim-r {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 46vw;
+  z-index: 1; pointer-events: none; opacity: 0;
+  background: linear-gradient(270deg, rgba(250,250,248,0.85), rgba(250,250,248,0.45) 55%, transparent);
+}
+body[data-side="right"] .text-scrim { opacity: 0; }
+body[data-side="right"] .text-scrim-r { opacity: 1; }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: auto; }
@@ -31,14 +33,97 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 
 body {
-  /* the warm studio glow lives in CSS — the 3D canvas is transparent over it */
+  /* the white showroom lives in CSS — the 3D canvas is transparent over it */
   background:
-    radial-gradient(ellipse 90% 70% at 68% 38%, var(--bg-warm), transparent 70%),
-    linear-gradient(180deg, #150e08, var(--bg) 40%, var(--bg-deep));
+    radial-gradient(ellipse 90% 70% at 60% 30%, #ffffff, transparent 70%),
+    linear-gradient(180deg, #fafaf8, var(--bg) 45%, var(--bg-deep));
   color: var(--fg);
   font-family: var(--font-body);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/* thin flowing red lines — the engineered backdrop (never competes with the car) */
+#bg-lines {
+  position: fixed; inset: -5%; width: 110%; height: 110%;
+  z-index: -2; pointer-events: none;
+}
+#bg-lines path {
+  fill: none; stroke: #e10600; stroke-width: 1.4;
+  stroke-dasharray: 1600 240; stroke-dashoffset: 0;
+  animation: lineflow 30s linear infinite;
+}
+#bg-lines path:nth-child(1) { opacity: 0.55; }
+#bg-lines path:nth-child(2) { opacity: 0.3; animation-duration: 44s; animation-direction: reverse; }
+#bg-lines path:nth-child(3) { opacity: 0.16; stroke-width: 2.4; animation-duration: 60s; }
+@keyframes lineflow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -1840; }
+}
+/* gauge rings — the oryzo circle work, automotive flavor */
+#bg-lines .ring {
+  fill: none; stroke: #e10600; stroke-width: 1.2;
+  stroke-dasharray: 480 240; opacity: 0.2;
+  transform-origin: center; transform-box: fill-box;
+  animation: ringspin 60s linear infinite;
+}
+#bg-lines .ring.r2 { opacity: 0.13; stroke-width: 2; animation-duration: 90s; animation-direction: reverse; }
+@keyframes ringspin { to { transform: rotate(360deg); } }
+
+/* drafting grid, barely-there */
+#bg-grid {
+  position: fixed; inset: 0; z-index: -3; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(16,17,20,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16,17,20,0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+/* white veil for cinematic car swaps */
+#swap-veil {
+  position: fixed; inset: 0; z-index: 30; pointer-events: none;
+  background: linear-gradient(180deg, #ffffff, #f2f2f0);
+  opacity: 0; transition: opacity 0.42s ease;
+}
+
+/* ==================== fleet switcher ==================== */
+#fleet-bar {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 3vh; z-index: 41;
+  display: flex; gap: 6px; padding: 6px;
+  background: rgba(255,255,255,0.75); backdrop-filter: blur(12px);
+  border: 1px solid var(--hairline); border-radius: 99px;
+  max-width: 92vw; overflow-x: auto; scrollbar-width: none;
+}
+.fleet-item {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; white-space: nowrap;
+  color: var(--muted); background: transparent; border: none; cursor: pointer;
+  padding: 9px 14px; border-radius: 99px; transition: all .25s ease;
+}
+.fleet-item:hover { color: var(--fg); }
+.fleet-item.active { background: var(--fg); color: #ffffff; }
+
+/* ==================== annotation hotspots (Sketchfab-style) ==================== */
+#annotations { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
+.anno {
+  position: absolute; transform: translate(-50%, -50%);
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(16,17,20,0.85); color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.9);
+  font-family: var(--font-mono); font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; pointer-events: auto;
+  transition: background .25s, scale .25s;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+.anno:hover { background: var(--accent-live); scale: 1.15; }
+.anno.active { background: var(--accent-live); }
+#profile-caption {
+  position: fixed; bottom: 9.5vh; left: 50%; transform: translateX(-50%);
+  z-index: 41; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+  opacity: 0; transition: opacity .4s;
 }
 
 /* giant word BEHIND the 3D car — the oryzo signature shot */
@@ -55,7 +140,7 @@ body {
 #tech-frame {
   position: fixed; z-index: 4; pointer-events: none; opacity: 0;
   top: 16vh; right: 8vw; width: 44vw; height: 64vh;
-  border: 1px dashed rgba(242,234,217,0.45);
+  border: 1px dashed rgba(16,17,20,0.38);
 }
 #tech-frame::before, #tech-frame::after {
   content: ''; position: absolute; background: var(--fg);
@@ -95,17 +180,17 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
 #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
 .vignette {
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background: radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(10,6,3,0.55) 100%);
+  background: radial-gradient(ellipse 120% 90% at 50% 45%, transparent 60%, rgba(20,20,22,0.07) 100%);
 }
 /* keeps the script column readable when bright bodywork passes behind it */
 .text-scrim {
   position: fixed; top: 0; left: 0; bottom: 0; width: 46vw;
   z-index: 1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(20,13,7,0.8), rgba(20,13,7,0.42) 55%, transparent);
+  background: linear-gradient(90deg, rgba(250,250,248,0.85), rgba(250,250,248,0.45) 55%, transparent);
 }
 @media (max-width: 768px) {
   .text-scrim { width: 100vw; top: 40vh;
-    background: linear-gradient(to top, rgba(20,13,7,0.85), rgba(20,13,7,0.4) 55%, transparent); }
+    background: linear-gradient(to top, rgba(250,250,248,0.9), rgba(250,250,248,0.45) 55%, transparent); }
 }
 .grain {
   position: fixed; inset: -50%; z-index: 2; pointer-events: none; opacity: 0.05;
@@ -122,8 +207,9 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
   position: fixed; inset: 0; z-index: 100; background: var(--bg-deep);
   display: flex; align-items: center; justify-content: center;
 }
+/* minimal loader — Sai designs the real intro later */
 .pre-wrap { text-align: center; }
-.tach { width: 130px; height: 130px; }
+.tach, .pre-brand { display: none; }
 .tach path { fill: none; stroke-width: 3; stroke-linecap: round; }
 .tach-track { stroke: rgba(111,116,128,0.18); }
 .tach-fill { stroke: var(--accent-live); stroke-dasharray: 227; stroke-dashoffset: 227; }
@@ -135,7 +221,7 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
   position: fixed; top: 0; left: 0; right: 0; z-index: 50;
   display: flex; justify-content: space-between; align-items: center;
   padding: 20px 64px 20px 32px;
-  background: linear-gradient(to bottom, rgba(15,10,6,0.7), transparent);
+  background: linear-gradient(to bottom, rgba(250,250,248,0.8), transparent);
 }
 #nav a { color: var(--fg); text-decoration: none; opacity: 0.85; transition: opacity .25s, color .25s; }
 #nav a:hover { opacity: 1; color: var(--accent); }
@@ -172,6 +258,18 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
   padding: 0 0 0 6vw;
   pointer-events: none;
 }
+/* movie-credits alternation: some chapters roll their titles on the right */
+.side-right .script {
+  margin-left: auto;
+  padding: 0 6vw 0 0;
+  text-align: right;
+  align-items: flex-end;
+}
+.side-right .services li { flex-direction: row-reverse; }
+.side-right .watermark {
+  justify-content: flex-start;
+  padding: 0 0 6vh 4vw;
+}
 .script > * { pointer-events: auto; }
 
 .label { color: var(--accent); margin-bottom: 22px; transition: color .5s; }
@@ -199,7 +297,7 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em;
   color: var(--muted); border: 1px solid var(--hairline);
   padding: 8px 14px; border-radius: 99px;
-  backdrop-filter: blur(6px); background: rgba(10,10,12,0.35);
+  backdrop-filter: blur(6px); background: rgba(255,255,255,0.55);
 }
 
 /* big watermark chapter number, right side */
@@ -212,7 +310,7 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
   font-family: var(--font-display); font-weight: 700;
   font-size: clamp(90px, 16vw, 240px); line-height: 1;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(111,116,128,0.16);
+  -webkit-text-stroke: 1px rgba(16,17,20,0.1);
 }
 
 /* ==================== hero — oryzo giant-type layout ==================== */
@@ -245,10 +343,10 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
 }
 /* glass info card, bottom-left — like their studio credit */
 .hero-card {
-  position: absolute; left: 4vw; bottom: 6vh;
+  position: absolute; left: 4vw; bottom: 11vh;
   max-width: 272px; padding: 20px 22px;
-  background: rgba(58, 42, 24, 0.38); backdrop-filter: blur(10px);
-  border: 1px solid rgba(242,234,217,0.14); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.62); backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline); border-radius: 10px;
 }
 .hero-card .hc-top {
   font-family: var(--font-display); font-weight: 700; font-size: 19px;
@@ -262,7 +360,7 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
 .side-tab {
   position: fixed; top: 0; right: 0; z-index: 40;
   writing-mode: vertical-rl; padding: 18px 8px;
-  background: var(--fg); color: var(--bg-deep);
+  background: var(--fg); color: #ffffff;
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em;
 }
 .scroll-cue {
@@ -299,11 +397,52 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
 }
 .paint-chip:hover .tip, .paint-chip.active .tip { opacity: 1; }
 
+/* ==================== craft cards ==================== */
+.craft-section { min-height: auto; padding: 22vh 0 10vh; }
+.craft-inner { max-width: 1080px; margin: 0 auto; padding: 0 5vw; }
+.craft-title {
+  font-family: var(--font-display); font-size: clamp(32px, 4.2vw, 56px);
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1.04; margin: 14px 0 48px;
+}
+.craft-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 22px;
+}
+.craft-card {
+  background: rgba(255,255,255,0.82); backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline); border-radius: 14px;
+  overflow: hidden; transition: transform .35s ease, box-shadow .35s ease;
+}
+.craft-card:hover { transform: translateY(-6px); box-shadow: 0 24px 48px rgba(16,17,20,0.1); }
+.craft-media {
+  aspect-ratio: 16 / 9; position: relative; overflow: hidden;
+  background:
+    linear-gradient(120deg, rgba(225,6,0,0.06), transparent 55%),
+    repeating-linear-gradient(115deg, transparent 0 26px, rgba(225,6,0,0.14) 26px 27px),
+    #f0f0ee;
+}
+.craft-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.craft-media .drop-hint {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em; color: var(--muted);
+}
+.craft-body { padding: 20px 22px 24px; }
+.craft-card h3 {
+  font-family: var(--font-display); font-weight: 700; font-size: 19px;
+  letter-spacing: -0.01em; margin-bottom: 8px;
+}
+.craft-card p { color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+.craft-card .tag {
+  display: inline-block; margin-top: 14px;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em;
+  color: var(--accent-live); text-transform: uppercase;
+}
+
 /* ==================== ledger ==================== */
 .ledger-section { min-height: auto; padding: 24vh 0; }
 .ledger-inner {
   max-width: 860px; margin: 0 auto; padding: 48px 5vw;
-  background: rgba(31, 21, 12, 0.8); backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(14px);
   border: 1px solid var(--hairline); border-radius: 14px;
 }
 .ledger-title {
@@ -319,7 +458,7 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
   padding: 17px 6px; border-bottom: 1px solid var(--hairline);
   transition: background .25s;
 }
-.ledger-row:hover { background: rgba(224,163,59,0.045); }
+.ledger-row:hover { background: rgba(225,6,0,0.04); }
 .ledger-car { font-family: var(--font-display); font-weight: 500; font-size: 17px; }
 .ledger-job { color: var(--muted); font-size: 13.5px; }
 .ledger-tag {
@@ -345,11 +484,11 @@ body[data-ignited="1"] .w-blur { filter: blur(0); }
   color: var(--fg); text-decoration: none;
   border: 1px solid var(--hairline); border-radius: 99px;
   padding: 16px 32px; transition: all .3s ease;
-  backdrop-filter: blur(6px); background: rgba(10,10,12,0.3);
+  backdrop-filter: blur(6px); background: rgba(255,255,255,0.55);
 }
 .btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
-.btn-accent { background: var(--accent); color: #0a0a0c; border-color: var(--accent); }
-.btn-accent:hover { color: #0a0a0c; filter: brightness(1.1); }
+.btn-accent { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+.btn-accent:hover { color: #ffffff; filter: brightness(1.1); }
 .book-inner footer {
   position: absolute; bottom: 4vh; left: 0; right: 0;
   display: flex; flex-direction: column; gap: 8px; align-items: center;

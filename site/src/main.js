@@ -10,13 +10,16 @@ import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createStage, IS_MOBILE } from './stage.js';
-import { loadCar } from './car.js';
+import { createShowroom } from './fleet.js';
 import { loadEngine } from './engine3d.js';
 import { buildChoreography } from './chapters.js';
-import { PAINTS } from './data.js';
 
 gsap.registerPlugin(ScrollTrigger);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// always start the experience at the top — no browser scroll restoration
+history.scrollRestoration = 'manual';
+scrollTo(0, 0);
 
 const canvas = document.getElementById('stage');
 const { renderer, scene, camera, lights } = createStage(canvas);
@@ -49,22 +52,21 @@ function withProgress(promiseFactory, key) {
 
 // BASE_URL is '/' in dev, '/sv-autocars/' on GitHub Pages
 const BASE = import.meta.env.BASE_URL;
-const carURL = BASE + (IS_MOBILE ? 'models/porsche-mobile.glb' : 'models/porsche.glb');
+const showroom = createShowroom(loader, scene);
 
 Promise.all([
   withProgress(
-    (cb) => new Promise((res, rej) => loader.load(carURL, res, cb, rej)),
+    (cb) => showroom.loadAll((f) => cb({ loaded: f, total: 1 })),
     'car'
   ),
   withProgress(
-    (cb) => new Promise((res, rej) => loader.load(BASE + 'models/engine.glb', res, cb, rej)),
+    (cb) => new Promise((res, rej) => loader.load(BASE + 'models/engine-v6.glb', res, cb, rej)),
     'engine'
   ),
 ])
-  .then(async ([carGltf, engineGltf]) => {
-    const car = await loadCar({ loadAsync: async () => carGltf }, scene, PAINTS);
+  .then(async ([, engineGltf]) => {
     const engine = await loadEngine({ loadAsync: async () => engineGltf }, scene);
-    start(car, engine);
+    start(showroom, engine);
   })
   .catch((err) => {
     console.error('[SV] asset load failed', err);
@@ -72,7 +74,7 @@ Promise.all([
   });
 
 // ---------- boot after load ----------
-function start(car, engine) {
+function start(showroom, engine) {
   // Lenis + GSAP: ONE rAF loop (two loops = the #1 cause of jitter).
   let lenis = null;
   if (!REDUCED) {
@@ -80,14 +82,11 @@ function start(car, engine) {
     lenis.on('scroll', ScrollTrigger.update);
   }
 
-  const choreo = buildChoreography({ camera, lights, car, engine, lenis });
+  const choreo = buildChoreography({ camera, lights, showroom, engine, lenis });
 
   gsap.ticker.add((time) => {
     if (lenis) lenis.raf(time * 1000);
     engine.tick(time);
-    if (choreo.spin.active && !REDUCED) {
-      for (const pivot of car.wheelPivots) pivot.rotation.x += 0.02;
-    }
     choreo.applyCam(time);
     renderer.render(scene, camera);
   });
@@ -109,7 +108,7 @@ function start(car, engine) {
 
   // ---------- debug hooks (only with ?debug) ----------
   if (location.search.includes('debug')) {
-    window.__three = { scene, camera, car, choreo, gsap, ScrollTrigger };
+    window.__three = { scene, camera, showroom, choreo, gsap, ScrollTrigger };
     window.__cam = (px, py, pz, lx, ly, lz, fov) => {
       Object.assign(choreo.cam, { px, py, pz, lx, ly, lz, ...(fov ? { fov } : {}) });
     };

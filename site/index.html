@@ -9,7 +9,7 @@
   <meta property="og:description" content="Engine to alloys, paint to PPF — one car, every craft. Hyderabad." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500&family=Literata:ital,wght@1,400;1,500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500&family=Literata:ital,wght@1,400;1,500&display=swap" rel="stylesheet" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -36,14 +36,24 @@
   </div>
 
   <!-- ==================== 3D STAGE (fixed, full-bleed) ==================== -->
+  <!-- engineered backdrop: red flowing lines + gauge rings + drafting grid -->
+  <div id="bg-grid" aria-hidden="true"></div>
+  <svg id="bg-lines" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <circle class="ring" cx="1240" cy="220" r="260" />
+    <circle class="ring r2" cx="270" cy="740" r="200" />
+    <path d="M -120 640 C 260 480, 520 780, 900 610 S 1420 330, 1760 470" />
+    <path d="M -120 720 C 340 600, 640 860, 1040 660 S 1480 420, 1760 560" />
+    <path d="M -120 240 C 380 380, 760 140, 1140 300 S 1560 480, 1760 380" />
+  </svg>
   <div id="giant-back" aria-hidden="true"></div>
   <canvas id="stage" aria-hidden="true"></canvas>
   <div class="text-scrim" aria-hidden="true"></div>
+  <div class="text-scrim-r" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
   <div class="grain" aria-hidden="true"></div>
   <div id="tech-frame" aria-hidden="true"><span class="dot"></span><span class="tick-l"></span><span class="tick-r"></span></div>
   <div id="footnote" aria-hidden="true"></div>
-  <div class="side-tab" aria-hidden="true">GT4 / STUDIO BUILD_</div>
+  <div class="side-tab" aria-hidden="true">SV FLEET / 7 CARS_</div>
 
   <!-- ==================== NAV ==================== -->
   <header id="nav">
@@ -86,6 +96,15 @@
     <section class="chapter" id="inside" data-cam="inside"></section>
     <section class="chapter" id="stance" data-cam="stance"></section>
 
+    <!-- ==================== THE CRAFT — what the studio does ==================== -->
+    <section class="chapter craft-section" id="craft">
+      <div class="craft-inner">
+        <div class="label mono">CH.06 / THE CRAFT_</div>
+        <h2 class="craft-title">Everything a car needs.<br/>Under one roof.</h2>
+        <div class="craft-grid"></div>
+      </div>
+    </section>
+
     <!-- ==================== THE LEDGER — real past work ==================== -->
     <section class="chapter ledger-section" id="ledger" data-cam="ledger">
       <div class="ledger-inner">
@@ -109,7 +128,7 @@
         </div>
         <footer>
           <span class="mono">SV AUTOCARS · HYDERABAD</span>
-          <span class="mono credits">SITE BY SAI GOGINENI · 3D V8 © MEEWW (CC-BY) · BUILT WITH THREE.JS + GSAP</span>
+          <span class="mono credits">SITE BY SAI GOGINENI · 3D V8 © MEEWW (CC-BY) · CAR MODELS VIA SKETCHFAB ARTISTS · BUILT WITH THREE.JS + GSAP</span>
         </footer>
       </div>
     </section>

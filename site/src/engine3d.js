@@ -28,54 +28,43 @@ export async function loadEngine(gltfLoader, scene) {
   group.add(root);
   root.position.sub(center); // engine centered on group origin
 
-  // The source model ships toy-like pastel colors (white/teal/cream).
-  // Re-grade to realistic workshop metals. A shared procedural noise bump
-  // breaks the CG-smooth surface — cast metal instead of plastic.
-  // Power parts (pistons/rods/crank/springs) get chrome + amber emissive
-  // so the "power" glows through the shell when the engine runs.
+  // Sai's V6 ships one flat material across 184 parts — grade each part
+  // by its size into realistic workshop metals. Small internals become the
+  // "power" group: chrome that glows amber with every firing beat.
   const noise = makeNoiseTexture();
-  const isPowerName = (n) => /piston|rod|crank|spring/i.test(n || '');
   const shellMats = [];
   const powerMats = [];
+  const meshInfo = [];
   root.traverse((o) => {
     if (!o.isMesh || !o.material) return;
-    const m = (o.material = o.material.clone()); // per-mesh so shell/power fade independently
-    const name = o.name || '';
-    const lum = m.color ? 0.299 * m.color.r + 0.587 * m.color.g + 0.114 * m.color.b : 0.5;
+    const size = new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()).length();
+    meshInfo.push({ mesh: o, size });
+  });
+  const sizesSorted = meshInfo.map((m) => m.size).sort((a, b) => a - b);
+  const q = (f) => sizesSorted[Math.floor(f * (sizesSorted.length - 1))];
+  const qBig = q(0.86);
+  const qSmall = q(0.5);
+  for (const { mesh, size } of meshInfo) {
+    const m = (mesh.material = mesh.material.clone());
     m.envMapIntensity = 1.1;
-    if (/piston/i.test(name)) {
-      // polished piston crowns
-      m.color?.set(0xd3d7dc); m.metalness = 1.0; m.roughness = 0.12;
-    } else if (/rod/i.test(name)) {
-      // machined con-rods
-      m.color?.set(0x9ba0a8); m.metalness = 1.0; m.roughness = 0.28;
-    } else if (/crank/i.test(name)) {
-      // forged steel crank
-      m.color?.set(0x484c53); m.metalness = 0.95; m.roughness = 0.44;
-      m.bumpMap = noise; m.bumpScale = 0.6;
-    } else if (/spring/i.test(name)) {
-      m.color?.set(0x7d838d); m.metalness = 1.0; m.roughness = 0.3;
-    } else if (lum > 0.62) {
-      // bright trim → brushed steel
-      m.color?.set(0xaab0b8); m.metalness = 1.0; m.roughness = 0.3;
+    if (size >= qBig) {
+      // big castings — dark cast block, grainy
+      m.color?.set(0x33363d); m.metalness = 0.85; m.roughness = 0.52;
+      m.bumpMap = noise; m.bumpScale = 0.9;
+      shellMats.push(m);
+    } else if (size >= qSmall) {
+      // mid components — machined alloy
+      m.color?.set(0x8d9298); m.metalness = 1.0; m.roughness = 0.36;
       m.roughnessMap = noise;
-    } else if (lum > 0.3) {
-      // cast aluminium block — rough, grainy
-      m.color?.set(0x8d9198); m.metalness = 0.95; m.roughness = 0.58;
-      m.bumpMap = noise; m.bumpScale = 0.9; m.roughnessMap = noise;
+      shellMats.push(m);
     } else {
-      // black crackle covers / dark castings
-      m.color?.set(0x1b1d21); m.metalness = 0.55; m.roughness = 0.68;
-      m.bumpMap = noise; m.bumpScale = 1.2;
-    }
-    if (isPowerName(name)) {
+      // small internals — polished steel, amber-glow capable
+      m.color?.set(0xc9ced6); m.metalness = 1.0; m.roughness = 0.16;
       m.emissive = new THREE.Color(0xe0a33b);
       m.emissiveIntensity = 0;
       powerMats.push(m);
-    } else {
-      shellMats.push(m);
     }
-  });
+  }
 
   // ---- Explode vectors: every mesh flies out along (center → mesh center),
   // with deterministic per-part jitter so the cloud looks organic.
